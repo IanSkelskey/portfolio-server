@@ -23,7 +23,15 @@ const ContactSchema = z.object({
   message: z.string().min(1, "Message is required").max(2000),
   // Honeypot — real users leave this empty; bots fill it in
   _honey: z.string().max(0).optional(),
+  // Timing — client records mount time; sent to detect instant bot submissions
+  _loadTime: z.number().optional(),
 });
+
+// URLs in the name field are a near-universal spam signal
+const URL_IN_NAME = /https?:\/\/|www\./i;
+// Flag messages with more than 5 URLs — legitimate messages rarely have this many
+const MAX_URLS_IN_MESSAGE = 5;
+const URL_COUNT_RE = /https?:\/\//gi;
 
 router.post("/", limiter, async (req: Request, res: Response) => {
   const result = ContactSchema.safeParse(req.body);
@@ -33,10 +41,27 @@ router.post("/", limiter, async (req: Request, res: Response) => {
     return;
   }
 
-  const { name, email, message, _honey } = result.data;
+  const { name, email, message, _honey, _loadTime } = result.data;
 
   // Silently discard bot submissions without revealing the check
   if (_honey) {
+    res.json({ ok: true });
+    return;
+  }
+
+  // Timing check — bots submit forms in milliseconds; require at least 2 seconds
+  if (_loadTime !== undefined && Date.now() - _loadTime < 2000) {
+    res.json({ ok: true });
+    return;
+  }
+
+  // Content filtering — silently drop obvious spam patterns
+  if (URL_IN_NAME.test(name)) {
+    res.json({ ok: true });
+    return;
+  }
+  const urlCount = (message.match(URL_COUNT_RE) ?? []).length;
+  if (urlCount > MAX_URLS_IN_MESSAGE) {
     res.json({ ok: true });
     return;
   }
