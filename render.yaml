@@ -11,3 +11,5 @@ services:
         sync: false   # set manually in Render dashboard
       - key: CONTACT_TO_EMAIL
         sync: false
+      - key: EXTRA_ORIGINS
+        sync: false   # e.g. http://localhost:5173 for local dev testing

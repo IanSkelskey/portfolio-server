@@ -9,7 +9,11 @@ const PORT = process.env.PORT ?? 3000;
 
 const ALLOWED_ORIGINS = [
   "https://ianskelskey.github.io",
-  ...(process.env.NODE_ENV === "development" ? ["http://localhost:5173"] : []),
+  // Additional origins can be added via EXTRA_ORIGINS="http://localhost:5173,http://localhost:4173"
+  ...((process.env.EXTRA_ORIGINS ?? "")
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean)),
 ];
 
 app.use(helmet());
