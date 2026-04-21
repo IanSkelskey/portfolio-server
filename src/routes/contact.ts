@@ -13,22 +13,44 @@ const limiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: "Too many requests. Please try again later." },
+  statusCode: 429,
+  message: {
+    error: "Too many messages sent. Please wait a few minutes and try again.",
+  },
 });
 
 const ContactSchema = z.object({
-  name: z.string().min(1, "Name is required").max(100),
-  email: z.string().email("Invalid email address").max(200),
-  message: z.string().min(1, "Message is required").max(2000),
+  name: z
+    .string()
+    .min(1, "Name is required.")
+    .max(100, "Name must be 100 characters or fewer."),
+  email: z
+    .string()
+    .min(1, "Email is required.")
+    .email("Please enter a valid email address.")
+    .max(200, "Email must be 200 characters or fewer."),
+  message: z
+    .string()
+    .min(1, "Message is required.")
+    .max(2000, "Message must be 2000 characters or fewer."),
   // Honeypot — real users leave this empty; bots fill it in
   _honey: z.string().max(0).optional(),
 });
+
+// Shape returned to the client on validation failure
+type FieldErrors = Partial<Record<"name" | "email" | "message", string>>;
 
 router.post("/", limiter, async (req: Request, res: Response) => {
   const result = ContactSchema.safeParse(req.body);
 
   if (!result.success) {
-    res.status(400).json({ error: "Invalid input." });
+    const flat = result.error.flatten().fieldErrors;
+    const errors: FieldErrors = {
+      name: flat.name?.[0],
+      email: flat.email?.[0],
+      message: flat.message?.[0],
+    };
+    res.status(400).json({ errors });
     return;
   }
 
