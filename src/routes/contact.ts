@@ -19,7 +19,12 @@ const limiter = rateLimit({
   // falling back to req.socket.remoteAddress (the proxy IP) — which would
   // give every request a different key and make the limit ineffective.
   validate: { trustProxy: false },
-  keyGenerator: (req) => req.ip ?? req.socket.remoteAddress ?? "unknown",
+  keyGenerator: (req) => {
+    const xff = req.headers["x-forwarded-for"];
+    return (Array.isArray(xff) ? xff[0] : xff?.split(",")[0])?.trim()
+      ?? req.socket.remoteAddress
+      ?? "unknown";
+  },
   message: { error: "Too many requests. Please try again later." },
 });
 
@@ -40,6 +45,13 @@ const MAX_URLS_IN_MESSAGE = 5;
 const URL_COUNT_RE = /https?:\/\//gi;
 
 router.post("/", limiter, async (req: Request, res: Response) => {
+  // X-Forwarded-For is a comma-separated list: client, proxy1, proxy2, ...
+  // The leftmost entry is always the original client IP, regardless of how
+  // many proxy hops Render uses internally.
+  const xff = req.headers["x-forwarded-for"];
+  const clientIp = (Array.isArray(xff) ? xff[0] : xff?.split(",")[0])?.trim()
+    ?? req.socket.remoteAddress
+    ?? "unknown";
   const result = ContactSchema.safeParse(req.body);
 
   if (!result.success) {
@@ -87,8 +99,8 @@ router.post("/", limiter, async (req: Request, res: Response) => {
       to: toAddress,
       replyTo: email,
       subject: `Portfolio contact from ${name}`,
-      text: `Name: ${name}\nEmail: ${email}\nIP: ${req.ip ?? req.socket.remoteAddress ?? "unknown"}\n\n${message}`,
-      html: buildContactEmailHtml({ name, email, message, ip: req.ip ?? req.socket.remoteAddress }),
+      text: `Name: ${name}\nEmail: ${email}\nIP: ${clientIp}\n\n${message}`,
+      html: buildContactEmailHtml({ name, email, message, ip: clientIp }),
     });
 
     res.json({ ok: true });
