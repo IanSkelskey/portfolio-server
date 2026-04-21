@@ -7,7 +7,7 @@ export function escapeHtml(str: string): string {
     .replace(/"/g, "&quot;");
 }
 
-const PORTRAIT_URL = "https://ianskelskey.github.io/favicon.svg";
+const PORTRAIT_URL = "https://ianskelskey.github.io/pixel-portrait-x12.png";
 const PORTFOLIO_URL = "https://ianskelskey.github.io";
 
 // Hard-coded hex values from the portfolio's light-mode palette.
