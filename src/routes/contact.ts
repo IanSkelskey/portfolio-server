@@ -8,10 +8,10 @@ const router = Router();
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// 5 submissions per IP per 15 minutes
+// 3 submissions per IP per 24 hours
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
+  windowMs: 24 * 60 * 60 * 1000,
+  max: 3,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many requests. Please try again later." },
