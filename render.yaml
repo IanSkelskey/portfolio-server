@@ -9,7 +9,5 @@ services:
         value: production
       - key: RESEND_API_KEY
         sync: false   # set manually in Render dashboard
-      - key: RESEND_DOMAIN
-        sync: false
       - key: CONTACT_TO_EMAIL
         sync: false

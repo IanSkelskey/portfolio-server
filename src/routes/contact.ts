@@ -40,7 +40,7 @@ router.post("/", limiter, async (req: Request, res: Response) => {
     return;
   }
 
-  const fromAddress = `Portfolio Contact <contact@${process.env.RESEND_DOMAIN}>`;
+  const fromAddress = "Portfolio Contact <onboarding@resend.dev>";
   const toAddress = process.env.CONTACT_TO_EMAIL;
 
   if (!toAddress) {
