@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import rateLimit from "express-rate-limit";
 import { Resend } from "resend";
 import { z } from "zod";
+import { buildContactEmailHtml, escapeHtml } from "../emailTemplate.js";
 
 const router = Router();
 
@@ -13,44 +14,22 @@ const limiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
-  statusCode: 429,
-  message: {
-    error: "Too many messages sent. Please wait a few minutes and try again.",
-  },
+  message: { error: "Too many requests. Please try again later." },
 });
 
 const ContactSchema = z.object({
-  name: z
-    .string()
-    .min(1, "Name is required.")
-    .max(100, "Name must be 100 characters or fewer."),
-  email: z
-    .string()
-    .min(1, "Email is required.")
-    .email("Please enter a valid email address.")
-    .max(200, "Email must be 200 characters or fewer."),
-  message: z
-    .string()
-    .min(1, "Message is required.")
-    .max(2000, "Message must be 2000 characters or fewer."),
+  name: z.string().min(1, "Name is required").max(100),
+  email: z.string().email("Invalid email address").max(200),
+  message: z.string().min(1, "Message is required").max(2000),
   // Honeypot — real users leave this empty; bots fill it in
   _honey: z.string().max(0).optional(),
 });
-
-// Shape returned to the client on validation failure
-type FieldErrors = Partial<Record<"name" | "email" | "message", string>>;
 
 router.post("/", limiter, async (req: Request, res: Response) => {
   const result = ContactSchema.safeParse(req.body);
 
   if (!result.success) {
-    const flat = result.error.flatten().fieldErrors;
-    const errors: FieldErrors = {
-      name: flat.name?.[0],
-      email: flat.email?.[0],
-      message: flat.message?.[0],
-    };
-    res.status(400).json({ errors });
+    res.status(400).json({ error: "Invalid input." });
     return;
   }
 
@@ -78,12 +57,7 @@ router.post("/", limiter, async (req: Request, res: Response) => {
       replyTo: email,
       subject: `Portfolio contact from ${name}`,
       text: `Name: ${name}\nEmail: ${email}\n\n${message}`,
-      html: `
-        <p><strong>Name:</strong> ${escapeHtml(name)}</p>
-        <p><strong>Email:</strong> ${escapeHtml(email)}</p>
-        <hr />
-        <p>${escapeHtml(message).replace(/\n/g, "<br>")}</p>
-      `,
+      html: buildContactEmailHtml({ name, email, message }),
     });
 
     res.json({ ok: true });
@@ -92,14 +66,5 @@ router.post("/", limiter, async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to send message. Please try again." });
   }
 });
-
-/** Minimal HTML escaping to prevent injection in the email body. */
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 export { router as contactRouter };
