@@ -7,6 +7,10 @@ import { contactRouter } from "./routes/contact.js";
 const app = express();
 const PORT = process.env.PORT ?? 3000;
 
+// Render (and most PaaS hosts) sit behind a reverse proxy — trust one hop
+// so express-rate-limit can read the real client IP from X-Forwarded-For.
+app.set("trust proxy", 1);
+
 const ALLOWED_ORIGINS = [
   "https://ianskelskey.github.io",
   // Additional origins can be added via EXTRA_ORIGINS="http://localhost:5173,http://localhost:4173"
