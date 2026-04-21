@@ -28,12 +28,14 @@ export interface EmailData {
   name: string;
   email: string;
   message: string;
+  ip?: string;
 }
 
-export function buildContactEmailHtml({ name, email, message }: EmailData): string {
+export function buildContactEmailHtml({ name, email, message, ip }: EmailData): string {
   const safeName    = escapeHtml(name);
   const safeEmail   = escapeHtml(email);
   const safeMessage = escapeHtml(message).replace(/\n/g, "<br>");
+  const safeIp      = ip ? escapeHtml(ip) : null;
 
   const font = "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif";
 
@@ -144,6 +146,7 @@ export function buildContactEmailHtml({ name, email, message }: EmailData): stri
                 <a href="${PORTFOLIO_URL}" style="color:${C.textMuted};text-decoration:none;">
                   ianskelskey.github.io
                 </a>
+                ${safeIp ? `&nbsp;&middot;&nbsp;IP&nbsp;${safeIp}` : ""}
               </p>
             </td>
           </tr>

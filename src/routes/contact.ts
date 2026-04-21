@@ -14,6 +14,12 @@ const limiter = rateLimit({
   max: 3,
   standardHeaders: true,
   legacyHeaders: false,
+  // trust proxy is already configured at the app level (trust proxy: 1).
+  // Disabling express-rate-limit's own proxy validation prevents it from
+  // falling back to req.socket.remoteAddress (the proxy IP) — which would
+  // give every request a different key and make the limit ineffective.
+  validate: { trustProxy: false },
+  keyGenerator: (req) => req.ip ?? req.socket.remoteAddress ?? "unknown",
   message: { error: "Too many requests. Please try again later." },
 });
 
@@ -81,8 +87,8 @@ router.post("/", limiter, async (req: Request, res: Response) => {
       to: toAddress,
       replyTo: email,
       subject: `Portfolio contact from ${name}`,
-      text: `Name: ${name}\nEmail: ${email}\n\n${message}`,
-      html: buildContactEmailHtml({ name, email, message }),
+      text: `Name: ${name}\nEmail: ${email}\nIP: ${req.ip ?? req.socket.remoteAddress ?? "unknown"}\n\n${message}`,
+      html: buildContactEmailHtml({ name, email, message, ip: req.ip ?? req.socket.remoteAddress }),
     });
 
     res.json({ ok: true });
